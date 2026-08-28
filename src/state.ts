@@ -10,7 +10,7 @@ import {
 import { bitsToValue, updateAt } from "./util";
 
 /** Base fall speed (px/tick) before any survival-based speed-up. */
-const BASE_FALL_STEP = 6;
+const BASE_FALL_STEP = 3;
 
 /** How quickly fall speed ramps up the longer the player survives. */
 const SPEED_UP_PER_TICK = 0.002;
@@ -52,25 +52,35 @@ const withinBounds = (
  * no separate search or sort is needed to find it.
  */
 export const tick = (s: State): State => {
-    const step = fallStepFor(s.elapsedTicks);
-    const moved = s.targets.map(t => ({ ...t, y: t.y + step }));
+    const step = calculateFallStep(s.elapsedTicks);
+    const movedTargets = s.targets.map(moveTarget(step));
     const elapsedTicks = s.elapsedTicks + 1;
 
-    if (moved.length === 0 || moved[0].y < CHECK_LINE_Y) {
-        return { ...s, targets: withinBounds(moved), elapsedTicks };
+    const hasNoTargets = movedTargets.length === 0;
+    const lowestTarget = movedTargets[0];
+    const isAboveLine = hasNoTargets || lowestTarget.y < CHECK_LINE_Y;
+
+    if (isAboveLine) {
+        const remainingInBounds = filterInBoundsTargets(movedTargets);
+        return { ...s, targets: remainingInBounds, elapsedTicks };
     }
 
-    const head = moved[0];
-    const rest = moved.slice(1);
-    const isMatch = bitsToValue(s.bits) === head.value;
+    const currentBitValue = bitsToValue(s.bits);
+    const isMatched = currentBitValue === lowestTarget.value;
+    const restTargets = movedTargets.slice(1);
 
-    return {
-        ...s,
-        gameEnd: !isMatch,
-        targets: withinBounds(isMatch ? rest : moved),
-        score: isMatch ? s.score + 1 : s.score,
-        elapsedTicks,
-    };
+    if (isMatched) {
+        const filteredRest = filterInBoundsTargets(restTargets);
+        return {
+            ...s,
+            targets: filteredRest,
+            score: s.score + 1,
+            elapsedTicks,
+        };
+    }
+
+    const filteredMoved = filterInBoundsTargets(movedTargets);
+    return { ...s, gameEnd: true, targets: filteredMoved, elapsedTicks };
 };
 
 /** Toggles the bit at `index` between 0 and 1. */

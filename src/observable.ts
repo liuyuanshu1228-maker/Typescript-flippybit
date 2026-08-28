@@ -35,6 +35,22 @@ export const allKeyFlips$: Observable<Action> = merge(
         keyFlip$(String(i + 1), i),
     ),
 );
+
+/**
+ * Clicking a digit box flips that bit too. Listening on #svgCanvas
+ * (present from page load) rather than the individual digit rects
+ * (created later, inside view.ts) means this works via event
+ * delegation no matter when those rects are created.
+ */
+export const mouseFlip$: Observable<Action> = fromEvent<MouseEvent>(
+    document.querySelector("#svgCanvas") as SVGSVGElement,
+    "click",
+).pipe(
+    map(e => (e.target as Element).getAttribute("data-bit-index")),
+    filter((index): index is string => index !== null),
+    map(index => flipBit(Number(index))),
+);
+
 /**
  * Full Game target sequence: values are random 0-255, and each new
  * target appears a random 1-3 seconds after the previous one (or

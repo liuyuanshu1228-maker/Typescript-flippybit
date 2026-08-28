@@ -14,21 +14,40 @@
 
 import "./style.css";
 
-import { Observable, fromEvent, merge, scan, switchMap, take } from "rxjs";
+import {
+    Observable,
+    filter,
+    fromEvent,
+    merge,
+    scan,
+    switchMap,
+    take,
+} from "rxjs";
 
-import { allKeyFlips$, spawn$, tick$ } from "./observable";
+import { allKeyFlips$, mouseFlip$, spawn$, tick$ } from "./observable";
 import { initialState, reduceState } from "./state";
 import { State } from "./types";
 import { render } from "./view";
 
 export const state$ = (): Observable<State> =>
-    merge(tick$, allKeyFlips$, spawn$).pipe(scan(reduceState, initialState));
+    merge(tick$, allKeyFlips$, mouseFlip$, spawn$).pipe(
+        scan(reduceState, initialState),
+    );
 
-// The following simply runs your main function on window load.  Make sure to leave it in place.
-// You should not need to change this, beware if you are.
 if (typeof window !== "undefined") {
-    // Observable: wait for first user click
-    const click$ = fromEvent(document.body, "mousedown").pipe(take(1));
+    // The very first mousedown anywhere starts the game (take(1) - it
+    // must not fire again, otherwise every later in-game click, e.g.
+    // on a digit box, would also restart the whole game here). From
+    // then on, pressing "r" - mid-play or from the game-over screen -
+    // restarts by making switchMap tear down the current state$()
+    // subscription (stopping its tick$/spawn$ timers) and subscribe
+    // to a brand new one, scanned again from initialState.
+    const firstClick$ = fromEvent(document.body, "mousedown").pipe(take(1));
+    const restartKey$ = fromEvent<KeyboardEvent>(document, "keydown").pipe(
+        filter(e => e.key === "r" || e.key === "R"),
+    );
 
-    click$.pipe(switchMap(() => state$())).subscribe(render());
+    merge(firstClick$, restartKey$)
+        .pipe(switchMap(() => state$()))
+        .subscribe(render());
 }

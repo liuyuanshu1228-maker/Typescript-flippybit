@@ -80,3 +80,34 @@ describe("reduceState", () => {
         expect(reduceState(initialState, flipBit(0)).bits[0]).toBe(1);
     });
 });
+
+describe("tick - score", () => {
+    it("increments score by 1 when a target is matched", () => {
+        const withOneTarget = spawnTarget(0)(initialState);
+        const almostThere: State = {
+            ...withOneTarget,
+            targets: [{ ...withOneTarget.targets[0], y: 400 }],
+        };
+        expect(tick(almostThere).score).toBe(1);
+    });
+
+    it("does not change score when a target is missed", () => {
+        const withOneTarget = spawnTarget(0)(initialState);
+        const mismatched: State = {
+            ...withOneTarget,
+            targets: [{ ...withOneTarget.targets[0], value: 255, y: 400 }],
+        };
+        expect(tick(mismatched).score).toBe(0);
+    });
+});
+
+describe("tick - speeding up", () => {
+    it("increases the effective fall speed as elapsedTicks grows", () => {
+        const withOneTarget = spawnTarget(0)(initialState);
+        const early: State = { ...withOneTarget, elapsedTicks: 0 };
+        const late: State = { ...withOneTarget, elapsedTicks: 5000 };
+        const earlyDelta = tick(early).targets[0].y - early.targets[0].y;
+        const lateDelta = tick(late).targets[0].y - late.targets[0].y;
+        expect(lateDelta).toBeGreaterThan(earlyDelta);
+    });
+});

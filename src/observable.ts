@@ -1,11 +1,12 @@
 import {
     Observable,
+    defer,
+    expand,
     filter,
     fromEvent,
     interval,
     map,
     merge,
-    take,
     timer,
 } from "rxjs";
 
@@ -34,23 +35,19 @@ export const allKeyFlips$: Observable<Action> = merge(
         keyFlip$(String(i + 1), i),
     ),
 );
-
 /**
- * Minimum-requirement target sequence: a fixed, hard-coded list of
- * values spawned at a fixed interval. Isolated in its own stream so
- * the Full Game version (random value, random 1-3s gap) can later
- * replace just this constant/stream without touching tick$,
- * allKeyFlips$, or how they're merged and scanned in main.ts.
+ * Full Game target sequence: values are random 0-255, and each new
+ * target appears a random 1-3 seconds after the previous one (or
+ * after the game starts). The randomness happens here, at the
+ * Observable "source" boundary, so spawnTarget itself stays a pure
+ * function of (value, State) => State regardless of where the value
+ * came from.
  */
-const HARDCODED_TARGETS: ReadonlyArray<number> = [
-    0x1a, 0x3f, 0x07, 0x92, 0xc4, 0x55,
-];
-const SPAWN_INTERVAL_MS = 2000;
+const randomByte = (): number => Math.floor(Math.random() * 256);
+const randomSpawnDelayMs = (): number => 1000 + Math.random() * 2000;
+const randomDelay$ = (): Observable<number> => timer(randomSpawnDelayMs());
 
-export const spawn$: Observable<Action> = timer(
-    SPAWN_INTERVAL_MS,
-    SPAWN_INTERVAL_MS,
-).pipe(
-    take(HARDCODED_TARGETS.length),
-    map(i => spawnTarget(HARDCODED_TARGETS[i])),
+export const spawn$: Observable<Action> = defer(randomDelay$).pipe(
+    expand(() => randomDelay$()),
+    map(() => spawnTarget(randomByte())),
 );

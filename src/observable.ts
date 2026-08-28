@@ -30,25 +30,27 @@ const keyFlip$ = (key: string, index: number): Observable<Action> =>
     );
 
 /** One flip stream per digit (keys "1" to "8"), merged into one stream. */
-export const allKeyFlips$: Observable<Action> = merge(
-    ...Array.from({ length: Constants.DIGIT_COUNT }, (_, i) =>
-        keyFlip$(String(i + 1), i),
+export const allKeyFlips$: Observable<Action> = defer(() =>
+    merge(
+        ...Array.from({ length: Constants.DIGIT_COUNT }, (_, i) =>
+            keyFlip$(String(i + 1), i),
+        ),
     ),
 );
-
 /**
  * Clicking a digit box flips that bit too. Listening on #svgCanvas
  * (present from page load) rather than the individual digit rects
  * (created later, inside view.ts) means this works via event
  * delegation no matter when those rects are created.
- */
-export const mouseFlip$: Observable<Action> = fromEvent<MouseEvent>(
-    document.querySelector("#svgCanvas") as SVGSVGElement,
-    "click",
-).pipe(
-    map(e => (e.target as Element).getAttribute("data-bit-index")),
-    filter((index): index is string => index !== null),
-    map(index => flipBit(Number(index))),
+ */ export const mouseFlip$: Observable<Action> = defer(() =>
+    fromEvent<MouseEvent>(
+        document.querySelector("#svgCanvas") as SVGSVGElement,
+        "click",
+    ).pipe(
+        map(e => (e.target as Element).getAttribute("data-bit-index")),
+        filter((index): index is string => index !== null),
+        map(index => flipBit(Number(index))),
+    ),
 );
 
 /**

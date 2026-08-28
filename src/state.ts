@@ -51,8 +51,13 @@ const withinBounds = (
  * speed, so targets[0] is always the one closest to the check line -
  * no separate search or sort is needed to find it.
  */
+/** Curried function: advances a single target downwards. */
+const moveTarget =
+    (step: number) =>
+    (t: FallingTarget): FallingTarget => ({ ...t, y: t.y + step });
+
 export const tick = (s: State): State => {
-    const step = calculateFallStep(s.elapsedTicks);
+    const step = fallStepFor(s.elapsedTicks);
     const movedTargets = s.targets.map(moveTarget(step));
     const elapsedTicks = s.elapsedTicks + 1;
 
@@ -61,8 +66,7 @@ export const tick = (s: State): State => {
     const isAboveLine = hasNoTargets || lowestTarget.y < CHECK_LINE_Y;
 
     if (isAboveLine) {
-        const remainingInBounds = filterInBoundsTargets(movedTargets);
-        return { ...s, targets: remainingInBounds, elapsedTicks };
+        return { ...s, targets: withinBounds(movedTargets), elapsedTicks };
     }
 
     const currentBitValue = bitsToValue(s.bits);
@@ -70,17 +74,20 @@ export const tick = (s: State): State => {
     const restTargets = movedTargets.slice(1);
 
     if (isMatched) {
-        const filteredRest = filterInBoundsTargets(restTargets);
         return {
             ...s,
-            targets: filteredRest,
+            targets: withinBounds(restTargets),
             score: s.score + 1,
             elapsedTicks,
         };
     }
 
-    const filteredMoved = filterInBoundsTargets(movedTargets);
-    return { ...s, gameEnd: true, targets: filteredMoved, elapsedTicks };
+    return {
+        ...s,
+        gameEnd: true,
+        targets: withinBounds(movedTargets),
+        elapsedTicks,
+    };
 };
 
 /** Toggles the bit at `index` between 0 and 1. */

@@ -18,8 +18,7 @@ export const updateAt = <T>(
  * Converts an 8-bit row (MSB first) into its decimal value (0-255).
  */
 export const bitsToValue = (bits: BitRow): number =>
-    bits.reduce((acc, bit) => acc * 2 + bit, 0);
-
+    bits.reduce<number>((acc, bit) => acc * 2 + bit, 0);
 /**
  * Formats a 0-255 value as a 2-digit uppercase hex string,
  * e.g. valueToHex(10) -> "0A".

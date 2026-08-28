@@ -27,20 +27,11 @@ import {
 } from "rxjs";
 
 /** Constants */
-
-const Viewport = {
-    CANVAS_WIDTH: 600,
-    CANVAS_HEIGHT: 400,
-} as const;
+import { Constants, Viewport } from "./types";
 
 const Target = {
     WIDTH: 64,
     HEIGHT: 36,
-} as const;
-
-const Constants = {
-    DIGIT_COUNT: 8,
-    TICK_RATE_MS: 500, // Might need to change this!
 } as const;
 
 // State processing

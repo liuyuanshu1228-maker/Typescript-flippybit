@@ -1,5 +1,4 @@
-import { BitRow } from "./types";
-
+import { Bit, BitRow } from "./types";
 /**
  * Returns a new array with the element at `index` replaced by
  * `updater(oldValue)`; every other element is left untouched.
@@ -25,3 +24,8 @@ export const bitsToValue = (bits: BitRow): number =>
  */
 export const valueToHex = (value: number): string =>
     value.toString(16).toUpperCase().padStart(2, "0");
+
+/**
+ * Toggles a single bit between 0 and 1.
+ */
+export const toggleBitValue = (bit: Bit): Bit => (bit === 0 ? 1 : 0);

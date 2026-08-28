@@ -7,19 +7,24 @@ import {
     State,
     Viewport,
 } from "./types";
-import { bitsToValue, updateAt } from "./util";
+import { bitsToValue, toggleBitValue, updateAt } from "./util";
 
-/** Base fall speed (px/tick) before any survival-based speed-up. */
-const BASE_FALL_STEP = 3;
+/** Base movement speed in pixels per tick. */
+const BASE_FALL_STEP = 6;
 
-/** How quickly fall speed ramps up the longer the player survives. */
+/** Speed acceleration rate per elapsed tick. */
 const SPEED_UP_PER_TICK = 0.002;
 
-/** How close to the bottom a target must get before it is judged. */
+/** Vertical pixel coordinate for the check line. */
 const CHECK_LINE_Y = Viewport.CANVAS_HEIGHT - 60;
 
+/** Canvas bottom boundary for target bounds check. */
+const CANVAS_BOTTOM_Y = Viewport.CANVAS_HEIGHT;
+
+/** Initial 8-bit zero array. */
 const initialBits: BitRow = new Array<Bit>(Constants.DIGIT_COUNT).fill(0);
 
+/** The pure initial state. */
 export const initialState: State = {
     gameEnd: false,
     bits: initialBits,
@@ -29,36 +34,38 @@ export const initialState: State = {
     elapsedTicks: 0,
 };
 
-/** Fall speed for a given tick, increasing gradually with survival time. */
-const fallStepFor = (elapsedTicks: number): number =>
-    BASE_FALL_STEP + elapsedTicks * SPEED_UP_PER_TICK;
+/** Calculates fall speed according to elapsed survival ticks. */
+const calculateFallStep = (elapsedTicks: number): number => {
+    const speedBoost = elapsedTicks * SPEED_UP_PER_TICK;
+    const step = BASE_FALL_STEP + speedBoost;
+    return step;
+};
 
-/**
- * Defensive cleanup: drops any target that has fallen past the bottom
- * of the canvas without being judged. In normal play the check line
- * always catches a target first, but this stops stray targets from
- * silently accumulating in state (and therefore in the rendered DOM).
- */
-const withinBounds = (
-    targets: ReadonlyArray<FallingTarget>,
-): ReadonlyArray<FallingTarget> =>
-    targets.filter(t => t.y <= Viewport.CANVAS_HEIGHT);
-
-/**
- * Advances the game by one time step: moves every target down, then
- * judges the "lowest" target (targets[0]) once it reaches the check
- * line. Targets are kept in spawn order and all fall at the same
- * speed, so targets[0] is always the one closest to the check line -
- * no separate search or sort is needed to find it.
- */
 /** Curried function: advances a single target downwards. */
 const moveTarget =
     (step: number) =>
     (t: FallingTarget): FallingTarget => ({ ...t, y: t.y + step });
 
+/** Keeps only the targets that are still within the canvas boundary. */
+const filterInBoundsTargets = (
+    targets: ReadonlyArray<FallingTarget>,
+): ReadonlyArray<FallingTarget> => {
+    const isInsideCanvas = (t: FallingTarget): boolean => {
+        const inside = t.y <= CANVAS_BOTTOM_Y;
+        return inside;
+    };
+    const validTargets = targets.filter(isInsideCanvas);
+    return validTargets;
+};
+
+/**
+ * Clock tick state transition:
+ * Moves targets down and evaluates lowest target reaching the check line.
+ */
 export const tick = (s: State): State => {
-    const step = fallStepFor(s.elapsedTicks);
-    const movedTargets = s.targets.map(moveTarget(step));
+    const step = calculateFallStep(s.elapsedTicks);
+    const targetMover = moveTarget(step);
+    const movedTargets = s.targets.map(targetMover);
     const elapsedTicks = s.elapsedTicks + 1;
 
     const hasNoTargets = movedTargets.length === 0;
@@ -66,7 +73,8 @@ export const tick = (s: State): State => {
     const isAboveLine = hasNoTargets || lowestTarget.y < CHECK_LINE_Y;
 
     if (isAboveLine) {
-        return { ...s, targets: withinBounds(movedTargets), elapsedTicks };
+        const remainingInBounds = filterInBoundsTargets(movedTargets);
+        return { ...s, targets: remainingInBounds, elapsedTicks };
     }
 
     const currentBitValue = bitsToValue(s.bits);
@@ -74,43 +82,36 @@ export const tick = (s: State): State => {
     const restTargets = movedTargets.slice(1);
 
     if (isMatched) {
+        const filteredRest = filterInBoundsTargets(restTargets);
         return {
             ...s,
-            targets: withinBounds(restTargets),
+            targets: filteredRest,
             score: s.score + 1,
             elapsedTicks,
         };
     }
 
-    return {
-        ...s,
-        gameEnd: true,
-        targets: withinBounds(movedTargets),
-        elapsedTicks,
-    };
+    const filteredMoved = filterInBoundsTargets(movedTargets);
+    return { ...s, gameEnd: true, targets: filteredMoved, elapsedTicks };
 };
 
-/** Toggles the bit at `index` between 0 and 1. */
+/** Pure Action: Flips bit at the given index. */
 export const flipBit =
-    (index: number) =>
+    (index: number): Action =>
     (s: State): State => ({
         ...s,
-        bits: updateAt(s.bits, index, b => (b === 0 ? 1 : 0)),
+        bits: updateAt(s.bits, index, toggleBitValue),
     });
 
-/** Adds a new falling target with the given value at the top of the board. */
+/** Pure Action: Spawns a new target at the top of the canvas (y = 0). */
 export const spawnTarget =
-    (value: number) =>
+    (value: number): Action =>
     (s: State): State => ({
         ...s,
         targets: [...s.targets, { id: s.nextTargetId, value, y: 0 }],
         nextTargetId: s.nextTargetId + 1,
     });
 
-/**
- * Folds one action into the state. Once the game has ended, every
- * further action is ignored so the final state (and the game-over
- * screen) stays frozen instead of continuing to update behind it.
- */
+/** Root reducer: Freezes transitions once gameEnd is triggered. */
 export const reduceState = (s: State, action: Action): State =>
     s.gameEnd ? s : action(s);

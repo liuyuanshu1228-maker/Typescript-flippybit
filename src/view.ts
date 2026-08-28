@@ -31,10 +31,10 @@ const createSvgElement = (
 
 const getOrCreateTargetElements = (
     svg: SVGSVGElement,
-    targetElements: Map
-number,
-Readonly<{ rect: SVGElement; text: SVGElement }>
->,
+    targetElements: Map<
+        number,
+        Readonly<{ rect: SVGElement; text: SVGElement }>
+    >,
     id: number,
 ): Readonly<{ rect: SVGElement; text: SVGElement }> => {
     const existing = targetElements.get(id);
@@ -76,36 +76,33 @@ export const render = (): ((s: State) => void) => {
     // mouseFlip$ in observable.ts can tell, via event delegation,
     // which digit was clicked.
     const digitWidth = Viewport.CANVAS_WIDTH / Constants.DIGIT_COUNT;
-    const digitTexts = Array.from(
-        { length: Constants.DIGIT_COUNT },
-        (_, i) => {
-            const box = createSvgElement(svg.namespaceURI, "rect", {
-                x: `${i * digitWidth + 4}`,
-                y: `${Viewport.CANVAS_HEIGHT - 50}`,
-                width: `${digitWidth - 8}`,
-                height: "40",
-                fill: "#ef9a9a",
-                stroke: "black",
-                "stroke-width": "2",
-                "data-bit-index": `${i}`,
-            });
-            const text = createSvgElement(svg.namespaceURI, "text", {
-                x: `${i * digitWidth + digitWidth / 2}`,
-                y: `${Viewport.CANVAS_HEIGHT - 22}`,
-                "text-anchor": "middle",
-                "font-family": "monospace",
-                fill: "black",
-                "data-bit-index": `${i}`,
-            });
-            svg.appendChild(box);
-            svg.appendChild(text);
-            return text;
-        },
-    );
+    const digitTexts = Array.from({ length: Constants.DIGIT_COUNT }, (_, i) => {
+        const box = createSvgElement(svg.namespaceURI, "rect", {
+            x: `${i * digitWidth + 4}`,
+            y: `${Viewport.CANVAS_HEIGHT - 50}`,
+            width: `${digitWidth - 8}`,
+            height: "40",
+            fill: "#ef9a9a",
+            stroke: "black",
+            "stroke-width": "2",
+            "data-bit-index": `${i}`,
+        });
+        const text = createSvgElement(svg.namespaceURI, "text", {
+            x: `${i * digitWidth + digitWidth / 2}`,
+            y: `${Viewport.CANVAS_HEIGHT - 22}`,
+            "text-anchor": "middle",
+            "font-family": "monospace",
+            fill: "black",
+            "data-bit-index": `${i}`,
+        });
+        svg.appendChild(box);
+        svg.appendChild(text);
+        return text;
+    });
 
-    const targetElements = new Map
-    number,
-    Readonly<{ rect: SVGElement; text: SVGElement }>
+    const targetElements = new Map<
+        number,
+        Readonly<{ rect: SVGElement; text: SVGElement }>
     >();
 
     return (s: State) => {

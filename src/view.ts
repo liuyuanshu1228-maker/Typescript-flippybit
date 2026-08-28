@@ -6,23 +6,19 @@ const Target = {
     HEIGHT: 36,
 } as const;
 
-/** Brings an SVG element to the foreground. */
 const bringToForeground = (elem: SVGElement): void => {
     elem.parentNode?.appendChild(elem);
 };
 
-/** Displays an SVG element on the canvas. Brings it to the foreground. */
 const show = (elem: SVGElement): void => {
     elem.setAttribute("visibility", "visible");
     bringToForeground(elem);
 };
 
-/** Hides an SVG element on the canvas. */
 const hide = (elem: SVGElement): void => {
     elem.setAttribute("visibility", "hidden");
 };
 
-/** Creates an SVG element with the given properties. */
 const createSvgElement = (
     namespace: string | null,
     name: string,
@@ -33,14 +29,12 @@ const createSvgElement = (
     return elem;
 };
 
-/**
- * Creates (or reuses) the pair of SVG elements representing one falling
- * target, keyed by the target's id so the same DOM node is updated
- * across frames instead of being recreated every tick.
- */
 const getOrCreateTargetElements = (
     svg: SVGSVGElement,
-    targetElements: Map<number, Readonly<{ rect: SVGElement; text: SVGElement }>>,
+    targetElements: Map
+number,
+Readonly<{ rect: SVGElement; text: SVGElement }>
+>,
     id: number,
 ): Readonly<{ rect: SVGElement; text: SVGElement }> => {
     const existing = targetElements.get(id);
@@ -68,11 +62,6 @@ const getOrCreateTargetElements = (
     return created;
 };
 
-/**
- * Sets up the static parts of the view once, then returns a function
- * that redraws the dynamic parts (bits, targets, game-over overlay)
- * for every new State.
- */
 export const render = (): ((s: State) => void) => {
     const svg = document.querySelector("#svgCanvas") as SVGSVGElement;
     const gameOver = document.querySelector("#gameOver") as SVGGraphicsElement;
@@ -83,8 +72,9 @@ export const render = (): ((s: State) => void) => {
         `0 0 ${Viewport.CANVAS_WIDTH} ${Viewport.CANVAS_HEIGHT}`,
     );
 
-    // The 8 bit boxes never move or get added/removed, so they are
-    // created once here; only their text changes per State.
+    // Each box/text pair carries a data-bit-index attribute so
+    // mouseFlip$ in observable.ts can tell, via event delegation,
+    // which digit was clicked.
     const digitWidth = Viewport.CANVAS_WIDTH / Constants.DIGIT_COUNT;
     const digitTexts = Array.from(
         { length: Constants.DIGIT_COUNT },
@@ -97,6 +87,7 @@ export const render = (): ((s: State) => void) => {
                 fill: "#ef9a9a",
                 stroke: "black",
                 "stroke-width": "2",
+                "data-bit-index": `${i}`,
             });
             const text = createSvgElement(svg.namespaceURI, "text", {
                 x: `${i * digitWidth + digitWidth / 2}`,
@@ -104,6 +95,7 @@ export const render = (): ((s: State) => void) => {
                 "text-anchor": "middle",
                 "font-family": "monospace",
                 fill: "black",
+                "data-bit-index": `${i}`,
             });
             svg.appendChild(box);
             svg.appendChild(text);
@@ -111,7 +103,6 @@ export const render = (): ((s: State) => void) => {
         },
     );
 
-    // Falling targets come and go, so their elements are tracked by id.
     const targetElements = new Map
     number,
     Readonly<{ rect: SVGElement; text: SVGElement }>
@@ -121,6 +112,7 @@ export const render = (): ((s: State) => void) => {
         s.bits.forEach((bit, i) => {
             digitTexts[i].textContent = String(bit);
         });
+        scoreText.textContent = String(s.score);
 
         const currentIds = new Set(s.targets.map(t => t.id));
         targetElements.forEach((els, id) => {

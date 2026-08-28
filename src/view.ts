@@ -76,6 +76,7 @@ const getOrCreateTargetElements = (
 export const render = (): ((s: State) => void) => {
     const svg = document.querySelector("#svgCanvas") as SVGSVGElement;
     const gameOver = document.querySelector("#gameOver") as SVGGraphicsElement;
+    const scoreText = document.querySelector("#scoreText") as HTMLElement;
 
     svg.setAttribute(
         "viewBox",

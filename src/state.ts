@@ -9,8 +9,11 @@ import {
 } from "./types";
 import { bitsToValue, updateAt } from "./util";
 
-/** How far (in px) a target moves down the screen on every tick. */
-const FALL_STEP = 6;
+/** Base fall speed (px/tick) before any survival-based speed-up. */
+const BASE_FALL_STEP = 6;
+
+/** How quickly fall speed ramps up the longer the player survives. */
+const SPEED_UP_PER_TICK = 0.002;
 
 /** How close to the bottom a target must get before it is judged. */
 const CHECK_LINE_Y = Viewport.CANVAS_HEIGHT - 60;
@@ -22,7 +25,13 @@ export const initialState: State = {
     bits: initialBits,
     targets: [],
     nextTargetId: 0,
+    score: 0,
+    elapsedTicks: 0,
 };
+
+/** Fall speed for a given tick, increasing gradually with survival time. */
+const fallStepFor = (elapsedTicks: number): number =>
+    BASE_FALL_STEP + elapsedTicks * SPEED_UP_PER_TICK;
 
 /**
  * Defensive cleanup: drops any target that has fallen past the bottom
@@ -43,10 +52,12 @@ const withinBounds = (
  * no separate search or sort is needed to find it.
  */
 export const tick = (s: State): State => {
-    const moved = s.targets.map(t => ({ ...t, y: t.y + FALL_STEP }));
+    const step = fallStepFor(s.elapsedTicks);
+    const moved = s.targets.map(t => ({ ...t, y: t.y + step }));
+    const elapsedTicks = s.elapsedTicks + 1;
 
     if (moved.length === 0 || moved[0].y < CHECK_LINE_Y) {
-        return { ...s, targets: withinBounds(moved) };
+        return { ...s, targets: withinBounds(moved), elapsedTicks };
     }
 
     const head = moved[0];
@@ -57,6 +68,8 @@ export const tick = (s: State): State => {
         ...s,
         gameEnd: !isMatch,
         targets: withinBounds(isMatch ? rest : moved),
+        score: isMatch ? s.score + 1 : s.score,
+        elapsedTicks,
     };
 };
 

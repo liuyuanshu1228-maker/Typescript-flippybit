@@ -11,7 +11,7 @@ export const Viewport = {
 /** Gameplay tuning constants shared across modules. */
 export const Constants = {
     DIGIT_COUNT: 8,
-    TICK_RATE_MS: 50, // Might need to change this!
+    TICK_RATE_MS: 50,
 } as const;
 
 /** A single binary digit. */
@@ -41,11 +41,11 @@ export type State = Readonly<{
     gameEnd: boolean;
     bits: BitRow;
     /**
-     * Targets kept in the order they spawned. Every target currently
-     * falls at the same speed, so the earliest-spawned target is
-     * always the one closest to the check line - meaning targets[0]
-     * (if it exists) is always the "lowest unresolved target" the
-     * player is compared against.
+     * Targets kept in the order they spawned. Every target falls at
+     * the same speed at any given moment, so the earliest-spawned
+     * target is always the one closest to the check line - meaning
+     * targets[0] (if it exists) is always the "lowest unresolved
+     * target" the player is compared against.
      */
     targets: ReadonlyArray<FallingTarget>;
     /**
@@ -53,11 +53,19 @@ export type State = Readonly<{
      * spawned target a unique id.
      */
     nextTargetId: number;
+    /** Number of targets matched since the game started. */
+    score: number;
+    /**
+     * Ticks elapsed since the game started; drives the gradual
+     * fall-speed increase in state.ts.
+     */
+    elapsedTicks: number;
 }>;
 
 /**
  * An "action" is a pure function that turns one State into the next.
- * Every stream (clock ticks, key presses, target spawns) ultimately
- * produces values of this type, which get folded together with scan.
+ * Every stream (clock ticks, key/mouse presses, target spawns)
+ * ultimately produces values of this type, which get folded together
+ * with scan.
  */
 export type Action = (s: State) => State;

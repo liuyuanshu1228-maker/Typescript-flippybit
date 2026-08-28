@@ -11,7 +11,7 @@ export const Viewport = {
 /** Gameplay tuning constants shared across modules. */
 export const Constants = {
     DIGIT_COUNT: 8,
-    TICK_RATE_MS: 500, // Might need to change this!
+    TICK_RATE_MS: 50, // Might need to change this!
 } as const;
 
 /** A single binary digit. */

@@ -10,7 +10,7 @@ import {
 import { bitsToValue, updateAt } from "./util";
 
 /** How far (in px) a target moves down the screen on every tick. */
-const FALL_STEP = 10;
+const FALL_STEP = 6;
 
 /** How close to the bottom a target must get before it is judged. */
 const CHECK_LINE_Y = Viewport.CANVAS_HEIGHT - 60;

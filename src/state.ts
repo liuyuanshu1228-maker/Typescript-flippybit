@@ -75,3 +75,23 @@ const resolveLowestTarget = (
     const scoredPoint = bitsToValue(bits) === head.value;
     return { targets: scoredPoint ? rest : targets, scoredPoint };
 };
+
+export const tick = (s: State): State => {
+    const step = fallStepFor(s.elapsedTicks);
+    const moved = moveTargets(step, s.targets);
+    const elapsedTicks = s.elapsedTicks + 1;
+
+    if (!isLowestAtCheckLine(moved)) {
+        return { ...s, targets: withinBounds(moved), elapsedTicks };
+    }
+
+    const { targets, scoredPoint } = resolveLowestTarget(s.bits, moved);
+
+    return {
+        ...s,
+        gameEnd: !scoredPoint,
+        targets: withinBounds(targets),
+        score: scoredPoint ? s.score + 1 : s.score,
+        elapsedTicks,
+    };
+};

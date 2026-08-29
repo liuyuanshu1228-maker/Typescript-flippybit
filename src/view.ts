@@ -113,6 +113,24 @@ export const render = (): ((s: State) => void) => {
             els.text.setAttribute("y", `${t.y + TargetBox.HEIGHT / 2 + 8}`);
             els.text.textContent = valueToHex(t.value);
         });
+        /**
+         * Moves an element to the end of its parent's children, i.e. on top
+         * in SVG's paint order (later siblings draw over earlier ones).
+         * Needed because #gameOver is declared first in index.html, but
+         * digit boxes and falling targets are appended after it at runtime -
+         * without this, the game-over overlay would be hidden behind them.
+         */
+        const bringToForeground = (elem: SVGElement): void => {
+            elem.parentNode?.appendChild(elem);
+        };
+
+        const setElementVisible = (
+            elem: SVGElement,
+            isVisible: boolean,
+        ): void => {
+            elem.setAttribute("visibility", isVisible ? "visible" : "hidden");
+            if (isVisible) bringToForeground(elem);
+        };
         setElementVisible(gameOver, s.gameEnd);
     };
 };

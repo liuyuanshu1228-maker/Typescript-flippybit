@@ -76,6 +76,12 @@ const resolveLowestTarget = (
     return { targets: scoredPoint ? rest : targets, scoredPoint };
 };
 
+/**
+ * Advances the game by one time step. Delegates the three separate
+ * concerns above - movement, line-crossing detection, and judging -
+ * to their own pure functions so each can be reasoned about (and
+ * tested) independently.
+ */
 export const tick = (s: State): State => {
     const step = fallStepFor(s.elapsedTicks);
     const moved = moveTargets(step, s.targets);
@@ -95,3 +101,19 @@ export const tick = (s: State): State => {
         elapsedTicks,
     };
 };
+/** Toggles the bit at `index` between 0 and 1. */
+export const flipBit =
+    (index: number) =>
+    (s: State): State => ({
+        ...s,
+        bits: updateAt(s.bits, index, b => (b === 0 ? 1 : 0)),
+    });
+
+/** Adds a new falling target with the given value at the top of the board. */
+export const spawnTarget =
+    (value: number) =>
+    (s: State): State => ({
+        ...s,
+        targets: [...s.targets, { id: s.nextTargetId, value, y: 0 }],
+        nextTargetId: s.nextTargetId + 1,
+    });

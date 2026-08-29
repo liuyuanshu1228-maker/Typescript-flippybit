@@ -1,49 +1,39 @@
 import { Constants, State, Viewport } from "./types";
 import { valueToHex } from "./util";
 
-const Target = {
+const TargetBox = {
     WIDTH: 64,
     HEIGHT: 36,
 } as const;
 
-const bringToForeground = (elem: SVGElement): void => {
-    elem.parentNode?.appendChild(elem);
-};
-
-const show = (elem: SVGElement): void => {
-    elem.setAttribute("visibility", "visible");
-    bringToForeground(elem);
-};
-
-const hide = (elem: SVGElement): void => {
-    elem.setAttribute("visibility", "hidden");
+const setElementVisible = (elem: SVGElement, isVisible: boolean): void => {
+    elem.setAttribute("visibility", isVisible ? "visible" : "hidden");
 };
 
 const createSvgElement = (
     namespace: string | null,
     name: string,
-    props: Record<string, string> = {},
+    attributes: Record<string, string> = {},
 ): SVGElement => {
     const elem = document.createElementNS(namespace, name) as SVGElement;
-    Object.entries(props).forEach(([k, v]) => elem.setAttribute(k, v));
+    Object.entries(attributes).forEach(([k, v]) => elem.setAttribute(k, v));
     return elem;
 };
 
+type pool = Readonly<{ rect: SVGElement; text: SVGElement }>;
+
 const getOrCreateTargetElements = (
     svg: SVGSVGElement,
-    targetElements: Map<
-        number,
-        Readonly<{ rect: SVGElement; text: SVGElement }>
-    >,
+    pool: Map<number, Readonly<{ rect: SVGElement; text: SVGElement }>>,
     id: number,
-): Readonly<{ rect: SVGElement; text: SVGElement }> => {
-    const existing = targetElements.get(id);
+): pool => {
+    const existing = pool.get(id);
     if (existing !== undefined) return existing;
 
     const rect = createSvgElement(svg.namespaceURI, "rect", {
-        x: `${Viewport.CANVAS_WIDTH / 2 - Target.WIDTH / 2}`,
-        width: `${Target.WIDTH}`,
-        height: `${Target.HEIGHT}`,
+        x: `${Viewport.CANVAS_WIDTH / 2 - TargetBox.WIDTH / 2}`,
+        width: `${TargetBox.WIDTH}`,
+        height: `${TargetBox.HEIGHT}`,
         rx: "6",
         fill: "white",
         stroke: "black",
@@ -57,8 +47,8 @@ const getOrCreateTargetElements = (
     });
     svg.appendChild(rect);
     svg.appendChild(text);
-    const created = { rect, text };
-    targetElements.set(id, created);
+    const created: pool = { rect, text };
+    pool.set(id, created);
     return created;
 };
 
@@ -100,10 +90,7 @@ export const render = (): ((s: State) => void) => {
         return text;
     });
 
-    const targetElements = new Map<
-        number,
-        Readonly<{ rect: SVGElement; text: SVGElement }>
-    >();
+    const pool = new Map<number, pool>();
 
     return (s: State) => {
         s.bits.forEach((bit, i) => {
@@ -112,25 +99,20 @@ export const render = (): ((s: State) => void) => {
         scoreText.textContent = String(s.score);
 
         const currentIds = new Set(s.targets.map(t => t.id));
-        targetElements.forEach((els, id) => {
+        pool.forEach((els, id) => {
             if (!currentIds.has(id)) {
                 els.rect.remove();
                 els.text.remove();
-                targetElements.delete(id);
+                pool.delete(id);
             }
         });
 
         s.targets.forEach(t => {
-            const els = getOrCreateTargetElements(svg, targetElements, t.id);
+            const els = getOrCreateTargetElements(svg, pool, t.id);
             els.rect.setAttribute("y", `${t.y}`);
-            els.text.setAttribute("y", `${t.y + Target.HEIGHT / 2 + 8}`);
+            els.text.setAttribute("y", `${t.y + TargetBox.HEIGHT / 2 + 8}`);
             els.text.textContent = valueToHex(t.value);
         });
-
-        if (s.gameEnd) {
-            show(gameOver);
-        } else {
-            hide(gameOver);
-        }
+        setElementVisible(gameOver, s.gameEnd);
     };
 };

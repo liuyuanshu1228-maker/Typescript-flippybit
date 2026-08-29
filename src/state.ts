@@ -84,14 +84,14 @@ const resolveLowestTarget = (
  */
 export const tick = (s: State): State => {
     const step = fallStepFor(s.elapsedTicks);
-    const moved = moveTargets(step, s.targets);
+    const movedTargets = moveTargets(step, s.targets);
     const elapsedTicks = s.elapsedTicks + 1;
 
-    if (!isLowestAtCheckLine(moved)) {
-        return { ...s, targets: withinBounds(moved), elapsedTicks };
+    if (!isLowestAtCheckLine(movedTargets)) {
+        return { ...s, targets: withinBounds(movedTargets), elapsedTicks };
     }
 
-    const { targets, scoredPoint } = resolveLowestTarget(s.bits, moved);
+    const { targets, scoredPoint } = resolveLowestTarget(s.bits, movedTargets);
 
     return {
         ...s,

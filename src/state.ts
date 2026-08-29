@@ -117,3 +117,11 @@ export const spawnTarget =
         targets: [...s.targets, { id: s.nextTargetId, value, y: 0 }],
         nextTargetId: s.nextTargetId + 1,
     });
+
+/**
+ * Folds one action into the state. Once the game has ended, every
+ * further action is ignored so the final state (and the game-over
+ * screen) stays frozen instead of continuing to update behind it.
+ */
+export const reduceState = (s: State, action: Action): State =>
+    s.gameEnd ? s : action(s);

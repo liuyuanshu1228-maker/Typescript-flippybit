@@ -137,3 +137,40 @@ export const initialState: State = {
     score: 0,
     elapsedTicks: 0,
 };
+
+/**
+ * Advances the game by one time step... [keep your existing comment]
+ * While paused, this is a no-op — returning s unchanged freezes both
+ * the fall animation and check-line judging in place.
+ */
+export const tick = (s: State): State => {
+    if (s.paused) return s;
+
+    const step = fallStepFor(s.elapsedTicks);
+    // ...rest of your existing tick body, unchanged
+};
+
+/** Toggles whether the game is paused. Takes no parameter, so unlike
+ *  flipBit/spawnTarget it doesn't need to be curried — it's already
+ *  exactly an Action. */
+export const togglePause = (s: State): State => ({
+    ...s,
+    paused: !s.paused,
+});
+
+/**
+ * Adds a new falling target... [keep your existing comment]
+ * Also a no-op while paused, so a random-spawn timer that elapses
+ * mid-pause doesn't dump a target onto the board the instant you
+ * resume.
+ */
+export const spawnTarget =
+    (value: number) =>
+    (s: State): State =>
+        s.paused
+            ? s
+            : {
+                  ...s,
+                  targets: [...s.targets, { id: s.nextTargetId, value, y: 0 }],
+                  nextTargetId: s.nextTargetId + 1,
+              };

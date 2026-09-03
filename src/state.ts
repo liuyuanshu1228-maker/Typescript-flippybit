@@ -125,3 +125,15 @@ export const spawnTarget =
  */
 export const reduceState = (s: State, action: Action): State =>
     s.gameEnd ? s : action(s);
+
+/**HD1, Reuse the "if X, do nothing" approach I already used in reduceState
+ */
+export const initialState: State = {
+    gameEnd: false,
+    paused: false,
+    bits: initialBits,
+    targets: [],
+    nextTargetId: 0,
+    score: 0,
+    elapsedTicks: 0,
+};

@@ -69,3 +69,15 @@ export type State = Readonly<{
  * with scan.
  */
 export type Action = (s: State) => State;
+
+/**for HD feature, I did a pause */
+export type State = Readonly<{
+    gameEnd: boolean;
+    /** When true, tick() and spawnTarget() become no-ops. */
+    paused: boolean;
+    bits: BitRow;
+    targets: ReadonlyArray<FallingTarget>;
+    nextTargetId: number;
+    score: number;
+    elapsedTicks: number;
+}>;

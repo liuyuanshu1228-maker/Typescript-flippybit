@@ -69,3 +69,18 @@ export const spawn$: Observable<Action> = defer(randomDelay$).pipe(
     expand(() => randomDelay$()),
     map(() => spawnTarget(randomByte())),
 );
+
+/**HD1,Pause*/
+import { flipBit, spawnTarget, tick, togglePause } from "./state";
+
+/**
+ * Pressing "p" toggles pause. Wrapped in defer() for the same reason
+ * as allKeyFlips$/mouseFlip$: fromEvent touches `document`, so this
+ * must not construct until subscription time (matters under vitest).
+ */
+export const pauseToggle$: Observable<Action> = defer(() =>
+    fromEvent<KeyboardEvent>(document, "keydown").pipe(
+        filter(e => (e.key === "p" || e.key === "P") && !e.repeat),
+        map(() => togglePause),
+    ),
+);

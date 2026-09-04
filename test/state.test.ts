@@ -112,6 +112,7 @@ describe("tick - speeding up", () => {
     });
 });
 
+/**new feature added test for the first two*/
 describe("togglePause", () => {
     it("pauses an unpaused state", () => {
         expect(togglePause(initialState).paused).toBe(true);
@@ -120,5 +121,13 @@ describe("togglePause", () => {
     it("unpauses a paused state", () => {
         const paused = togglePause(initialState);
         expect(togglePause(paused).paused).toBe(false);
+    });
+});
+
+/**new feature added test for dropping*/
+describe("tick - paused", () => {
+    it("leaves state unchanged while paused", () => {
+        const paused: State = { ...spawnTarget(0)(initialState), paused: true };
+        expect(tick(paused)).toBe(paused);
     });
 });

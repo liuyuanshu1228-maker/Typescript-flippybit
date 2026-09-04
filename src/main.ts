@@ -1,5 +1,5 @@
 /**
-* Inside this file you will use the classes and functions from rx.js
+ * Inside this file you will use the classes and functions from rx.js
  * to add visuals to the svg element in index.html, animate them, and make them interactive.
  *
  * Study and complete the tasks in observable exercises first to get ideas.
@@ -51,3 +51,17 @@ if (typeof window !== "undefined") {
         .pipe(switchMap(() => state$()))
         .subscribe(render());
 }
+
+/**Hd, features */
+import {
+    allKeyFlips$,
+    mouseFlip$,
+    pauseToggle$,
+    spawn$,
+    tick$,
+} from "./observable";
+
+export const state$ = (): Observable<State> =>
+    merge(tick$, allKeyFlips$, mouseFlip$, spawn$, pauseToggle$).pipe(
+        scan(reduceState, initialState),
+    );

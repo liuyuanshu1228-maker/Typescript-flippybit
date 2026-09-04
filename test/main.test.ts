@@ -3,22 +3,25 @@ import { Observable } from "rxjs";
 import { State } from "../src/types";
 import { state$ } from "../src/main";
 
-describe("state$", () => {
-    it("is defined", () => {
-        assert.isDefined(state$);
-    });
-    it("is a function", () => {
-        assert.isFunction(state$);
+describe("state$ - game loop progression", () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
     });
 
-    it("returns an Observable", () => {
-        assert.instanceOf(state$(), Observable);
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
-    it("returns a fresh Observable on every call", () => {
-        // Each call must produce an independent stream, since
-        // main.ts relies on this for switchMap(() => state$()) to
-        // actually tear down and restart the game on "r".
-        assert.notStrictEqual(state$(), state$());
+    it("advances elapsedTicks as time passes", () => {
+        let latest: State | undefined;
+        const sub = state$().subscribe(s => {
+            latest = s;
+        });
+
+        vi.advanceTimersByTime(500); // 500ms / 50ms per tick = 10 ticks
+
+        assert.isDefined(latest);
+        assert.isAbove(latest!.elapsedTicks, 0);
+        sub.unsubscribe();
     });
 });

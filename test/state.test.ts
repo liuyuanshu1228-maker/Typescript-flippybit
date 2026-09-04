@@ -111,3 +111,14 @@ describe("tick - speeding up", () => {
         expect(lateDelta).toBeGreaterThan(earlyDelta);
     });
 });
+
+describe("togglePause", () => {
+    it("pauses an unpaused state", () => {
+        expect(togglePause(initialState).paused).toBe(true);
+    });
+
+    it("unpauses a paused state", () => {
+        const paused = togglePause(initialState);
+        expect(togglePause(paused).paused).toBe(false);
+    });
+});

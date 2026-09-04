@@ -131,3 +131,12 @@ describe("tick - paused", () => {
         expect(tick(paused)).toBe(paused);
     });
 });
+/**To prevent unreasonable behavior such as
+ * "secretly generating targets during pauses and then
+ * suddenly appearing as soon as the game resumes".*/
+describe("spawnTarget - paused", () => {
+    it("does not add a target while paused", () => {
+        const paused: State = { ...initialState, paused: true };
+        expect(spawnTarget(5)(paused).targets).toHaveLength(0);
+    });
+});

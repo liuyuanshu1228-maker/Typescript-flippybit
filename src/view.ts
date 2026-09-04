@@ -134,3 +134,32 @@ export const render = (): ((s: State) => void) => {
         setElementVisible(gameOver, s.gameEnd);
     };
 };
+
+/**for the HD1 feature*/
+// Built programmatically (rather than declared in index.html) so
+// that no changes to the static markup are needed — same technique
+// already used for the digit boxes above.
+const pausedOverlay = createSvgElement(svg.namespaceURI, "g", {
+    visibility: "hidden",
+});
+const pausedRect = createSvgElement(svg.namespaceURI, "rect", {
+    x: "225",
+    y: "176",
+    fill: "white",
+    height: "48",
+    width: "150",
+});
+const pausedText = createSvgElement(svg.namespaceURI, "text", {
+    x: "245",
+    y: "206",
+});
+pausedText.textContent = "Paused";
+pausedOverlay.appendChild(pausedRect);
+pausedOverlay.appendChild(pausedText);
+svg.appendChild(pausedOverlay);
+
+if (s.paused && !s.gameEnd) {
+    show(pausedOverlay);
+} else {
+    hide(pausedOverlay);
+}

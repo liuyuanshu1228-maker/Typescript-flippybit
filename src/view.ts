@@ -163,3 +163,8 @@ if (s.paused && !s.gameEnd) {
 } else {
     hide(pausedOverlay);
 }
+
+/**retuse the show and hide for game over */
+const pausedOverlay = document.querySelector(
+    "#pausedOverlay",
+) as SVGGraphicsElement;

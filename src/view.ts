@@ -6,8 +6,20 @@ const TargetBox = {
     HEIGHT: 36,
 } as const;
 
+/**
+ * Moves an element to the end of its parent's children, i.e. on top
+ * in SVG's paint order (later siblings draw over earlier ones).
+ * Needed because #gameOver and the paused overlay are created before
+ * digit boxes and falling targets get appended - without this, those
+ * overlays would end up hidden behind them.
+ */
+const bringToForeground = (elem: SVGElement): void => {
+    elem.parentNode?.appendChild(elem);
+};
+
 const setElementVisible = (elem: SVGElement, isVisible: boolean): void => {
     elem.setAttribute("visibility", isVisible ? "visible" : "hidden");
+    if (isVisible) bringToForeground(elem);
 };
 
 const createSvgElement = (
@@ -20,14 +32,14 @@ const createSvgElement = (
     return elem;
 };
 
-type pool = Readonly<{ rect: SVGElement; text: SVGElement }>;
+type TargetElements = Readonly<{ rect: SVGElement; text: SVGElement }>;
 
 const getOrCreateTargetElements = (
     svg: SVGSVGElement,
-    pool: Map<number, Readonly<{ rect: SVGElement; text: SVGElement }>>,
+    targetElements: Map<number, TargetElements>,
     id: number,
-): pool => {
-    const existing = pool.get(id);
+): TargetElements => {
+    const existing = targetElements.get(id);
     if (existing !== undefined) return existing;
 
     const rect = createSvgElement(svg.namespaceURI, "rect", {
@@ -47,8 +59,8 @@ const getOrCreateTargetElements = (
     });
     svg.appendChild(rect);
     svg.appendChild(text);
-    const created: pool = { rect, text };
-    pool.set(id, created);
+    const created: TargetElements = { rect, text };
+    targetElements.set(id, created);
     return created;
 };
 
@@ -90,7 +102,29 @@ export const render = (): ((s: State) => void) => {
         return text;
     });
 
-    const pool = new Map<number, pool>();
+    const targetElements = new Map<number, TargetElements>();
+
+    // Built programmatically (rather than declared in index.html) so
+    // that no changes to the static markup are needed - same
+    // technique already used for the digit boxes above.
+    const pausedOverlay = createSvgElement(svg.namespaceURI, "g", {
+        visibility: "hidden",
+    });
+    const pausedRect = createSvgElement(svg.namespaceURI, "rect", {
+        x: "225",
+        y: "176",
+        fill: "white",
+        height: "48",
+        width: "150",
+    });
+    const pausedText = createSvgElement(svg.namespaceURI, "text", {
+        x: "245",
+        y: "206",
+    });
+    pausedText.textContent = "Paused";
+    pausedOverlay.appendChild(pausedRect);
+    pausedOverlay.appendChild(pausedText);
+    svg.appendChild(pausedOverlay);
 
     return (s: State) => {
         s.bits.forEach((bit, i) => {
@@ -99,78 +133,22 @@ export const render = (): ((s: State) => void) => {
         scoreText.textContent = String(s.score);
 
         const currentIds = new Set(s.targets.map(t => t.id));
-        pool.forEach((els, id) => {
+        targetElements.forEach((els, id) => {
             if (!currentIds.has(id)) {
                 els.rect.remove();
                 els.text.remove();
-                pool.delete(id);
+                targetElements.delete(id);
             }
         });
 
         s.targets.forEach(t => {
-            const els = getOrCreateTargetElements(svg, pool, t.id);
+            const els = getOrCreateTargetElements(svg, targetElements, t.id);
             els.rect.setAttribute("y", `${t.y}`);
             els.text.setAttribute("y", `${t.y + TargetBox.HEIGHT / 2 + 8}`);
             els.text.textContent = valueToHex(t.value);
         });
-        /**
-         * Moves an element to the end of its parent's children, i.e. on top
-         * in SVG's paint order (later siblings draw over earlier ones).
-         * Needed because #gameOver is declared first in index.html, but
-         * digit boxes and falling targets are appended after it at runtime -
-         * without this, the game-over overlay would be hidden behind them.
-         */
-        const bringToForeground = (elem: SVGElement): void => {
-            elem.parentNode?.appendChild(elem);
-        };
 
-        const setElementVisible = (
-            elem: SVGElement,
-            isVisible: boolean,
-        ): void => {
-            elem.setAttribute("visibility", isVisible ? "visible" : "hidden");
-            if (isVisible) bringToForeground(elem);
-        };
         setElementVisible(gameOver, s.gameEnd);
+        setElementVisible(pausedOverlay, s.paused && !s.gameEnd);
     };
 };
-
-/**for the HD1 feature*/
-// Built programmatically (rather than declared in index.html) so
-// that no changes to the static markup are needed — same technique
-// already used for the digit boxes above.
-const pausedOverlay = createSvgElement(svg.namespaceURI, "g", {
-    visibility: "hidden",
-});
-const pausedRect = createSvgElement(svg.namespaceURI, "rect", {
-    x: "225",
-    y: "176",
-    fill: "white",
-    height: "48",
-    width: "150",
-});
-const pausedText = createSvgElement(svg.namespaceURI, "text", {
-    x: "245",
-    y: "206",
-});
-pausedText.textContent = "Paused";
-pausedOverlay.appendChild(pausedRect);
-pausedOverlay.appendChild(pausedText);
-svg.appendChild(pausedOverlay);
-
-if (s.paused && !s.gameEnd) {
-    show(pausedOverlay);
-} else {
-    hide(pausedOverlay);
-}
-
-/**retuse the show and hide for game over */
-const pausedOverlay = document.querySelector(
-    "#pausedOverlay",
-) as SVGGraphicsElement;
-
-if (s.paused && !s.gameEnd) {
-    show(pausedOverlay);
-} else {
-    hide(pausedOverlay);
-}

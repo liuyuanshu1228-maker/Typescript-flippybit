@@ -24,13 +24,19 @@ import {
     take,
 } from "rxjs";
 
-import { allKeyFlips$, mouseFlip$, spawn$, tick$ } from "./observable";
+import {
+    allKeyFlips$,
+    mouseFlip$,
+    pauseToggle$,
+    spawn$,
+    tick$,
+} from "./observable";
 import { initialState, reduceState } from "./state";
 import { State } from "./types";
 import { render } from "./view";
 
 export const state$ = (): Observable<State> =>
-    merge(tick$, allKeyFlips$, mouseFlip$, spawn$).pipe(
+    merge(tick$, allKeyFlips$, mouseFlip$, spawn$, pauseToggle$).pipe(
         scan(reduceState, initialState),
     );
 
@@ -51,17 +57,3 @@ if (typeof window !== "undefined") {
         .pipe(switchMap(() => state$()))
         .subscribe(render());
 }
-
-/**Hd, features */
-import {
-    allKeyFlips$,
-    mouseFlip$,
-    pauseToggle$,
-    spawn$,
-    tick$,
-} from "./observable";
-
-export const state$ = (): Observable<State> =>
-    merge(tick$, allKeyFlips$, mouseFlip$, spawn$, pauseToggle$).pipe(
-        scan(reduceState, initialState),
-    );

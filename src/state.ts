@@ -22,6 +22,7 @@ const initialBits: BitRow = new Array<Bit>(Constants.DIGIT_COUNT).fill(0);
 
 export const initialState: State = {
     gameEnd: false,
+    paused: false,
     bits: initialBits,
     targets: [],
     nextTargetId: 0,
@@ -81,8 +82,13 @@ const resolveLowestTarget = (
  * concerns above - movement, line-crossing detection, and judging -
  * to their own pure functions so each can be reasoned about (and
  * tested) independently.
+ *
+ * While paused, this is a no-op - returning s unchanged freezes both
+ * the fall animation and check-line judging in place.
  */
 export const tick = (s: State): State => {
+    if (s.paused) return s;
+
     const step = fallStepFor(s.elapsedTicks);
     const movedTargets = moveTargets(step, s.targets);
     const elapsedTicks = s.elapsedTicks + 1;
@@ -101,6 +107,7 @@ export const tick = (s: State): State => {
         elapsedTicks,
     };
 };
+
 /** Toggles the bit at `index` between 0 and 1. */
 export const flipBit =
     (index: number) =>
@@ -109,58 +116,9 @@ export const flipBit =
         bits: updateAt(s.bits, index, b => (b === 0 ? 1 : 0)),
     });
 
-/** Adds a new falling target with the given value at the top of the board. */
-export const spawnTarget =
-    (value: number) =>
-    (s: State): State => ({
-        ...s,
-        targets: [...s.targets, { id: s.nextTargetId, value, y: 0 }],
-        nextTargetId: s.nextTargetId + 1,
-    });
-
 /**
- * Folds one action into the state. Once the game has ended, every
- * further action is ignored so the final state (and the game-over
- * screen) stays frozen instead of continuing to update behind it.
- */
-export const reduceState = (s: State, action: Action): State =>
-    s.gameEnd ? s : action(s);
-
-/**HD1, Reuse the "if X, do nothing" approach I already used in reduceState
- */
-export const initialState: State = {
-    gameEnd: false,
-    paused: false,
-    bits: initialBits,
-    targets: [],
-    nextTargetId: 0,
-    score: 0,
-    elapsedTicks: 0,
-};
-
-/**
- * Advances the game by one time step... [keep your existing comment]
- * While paused, this is a no-op — returning s unchanged freezes both
- * the fall animation and check-line judging in place.
- */
-export const tick = (s: State): State => {
-    if (s.paused) return s;
-
-    const step = fallStepFor(s.elapsedTicks);
-    // ...rest of your existing tick body, unchanged
-};
-
-/** Toggles whether the game is paused. Takes no parameter, so unlike
- *  flipBit/spawnTarget it doesn't need to be curried — it's already
- *  exactly an Action. */
-export const togglePause = (s: State): State => ({
-    ...s,
-    paused: !s.paused,
-});
-
-/**
- * Adds a new falling target... [keep your existing comment]
- * Also a no-op while paused, so a random-spawn timer that elapses
+ * Adds a new falling target with the given value at the top of the
+ * board. A no-op while paused, so a random-spawn timer that elapses
  * mid-pause doesn't dump a target onto the board the instant you
  * resume.
  */
@@ -174,3 +132,19 @@ export const spawnTarget =
                   targets: [...s.targets, { id: s.nextTargetId, value, y: 0 }],
                   nextTargetId: s.nextTargetId + 1,
               };
+
+/** Toggles whether the game is paused. Takes no parameter, so unlike
+ *  flipBit/spawnTarget it doesn't need to be curried - it's already
+ *  exactly an Action. */
+export const togglePause = (s: State): State => ({
+    ...s,
+    paused: !s.paused,
+});
+
+/**
+ * Folds one action into the state. Once the game has ended, every
+ * further action is ignored so the final state (and the game-over
+ * screen) stays frozen instead of continuing to update behind it.
+ */
+export const reduceState = (s: State, action: Action): State =>
+    s.gameEnd ? s : action(s);

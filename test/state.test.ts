@@ -5,6 +5,7 @@ import {
     reduceState,
     spawnTarget,
     tick,
+    togglePause,
 } from "../src/state";
 import { State } from "../src/types";
 

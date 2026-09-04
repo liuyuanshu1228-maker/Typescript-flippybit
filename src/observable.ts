@@ -10,7 +10,7 @@ import {
     timer,
 } from "rxjs";
 
-import { flipBit, spawnTarget, tick } from "./state";
+import { flipBit, spawnTarget, tick, togglePause } from "./state";
 import { Action, Constants } from "./types";
 
 /** Emits a Tick action at a fixed rate, driving the whole game loop. */
@@ -37,12 +37,14 @@ export const allKeyFlips$: Observable<Action> = defer(() =>
         ),
     ),
 );
+
 /**
  * Clicking a digit box flips that bit too. Listening on #svgCanvas
  * (present from page load) rather than the individual digit rects
  * (created later, inside view.ts) means this works via event
  * delegation no matter when those rects are created.
- */ export const mouseFlip$: Observable<Action> = defer(() =>
+ */
+export const mouseFlip$: Observable<Action> = defer(() =>
     fromEvent<MouseEvent>(
         document.querySelector("#svgCanvas") as SVGSVGElement,
         "click",
@@ -69,9 +71,6 @@ export const spawn$: Observable<Action> = defer(randomDelay$).pipe(
     expand(() => randomDelay$()),
     map(() => spawnTarget(randomByte())),
 );
-
-/**HD1,Pause*/
-import { flipBit, spawnTarget, tick, togglePause } from "./state";
 
 /**
  * Pressing "p" toggles pause. Wrapped in defer() for the same reason

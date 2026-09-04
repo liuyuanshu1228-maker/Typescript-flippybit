@@ -39,6 +39,8 @@ export type FallingTarget = Readonly<{
 /** Overall game state. */
 export type State = Readonly<{
     gameEnd: boolean;
+    /** When true, tick() and spawnTarget() become no-ops. */
+    paused: boolean;
     bits: BitRow;
     /**
      * Targets kept in the order they spawned. Every target falls at
@@ -69,15 +71,3 @@ export type State = Readonly<{
  * with scan.
  */
 export type Action = (s: State) => State;
-
-/**for HD feature, I did a pause */
-export type State = Readonly<{
-    gameEnd: boolean;
-    /** When true, tick() and spawnTarget() become no-ops. */
-    paused: boolean;
-    bits: BitRow;
-    targets: ReadonlyArray<FallingTarget>;
-    nextTargetId: number;
-    score: number;
-    elapsedTicks: number;
-}>;

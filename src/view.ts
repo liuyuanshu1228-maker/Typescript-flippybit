@@ -168,3 +168,9 @@ if (s.paused && !s.gameEnd) {
 const pausedOverlay = document.querySelector(
     "#pausedOverlay",
 ) as SVGGraphicsElement;
+
+if (s.paused && !s.gameEnd) {
+    show(pausedOverlay);
+} else {
+    hide(pausedOverlay);
+}

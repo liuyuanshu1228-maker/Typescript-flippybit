@@ -17,9 +17,15 @@ const bringToForeground = (elem: SVGElement): void => {
     elem.parentNode?.appendChild(elem);
 };
 
+/**
+ * Sets an element's visibility, and - only when becoming visible -
+ * also raises it to the front. The `&&` short-circuits exactly like
+ * the original "if (isVisible)" guard: bringToForeground is simply
+ * never called when isVisible is false.
+ */
 const setElementVisible = (elem: SVGElement, isVisible: boolean): void => {
     elem.setAttribute("visibility", isVisible ? "visible" : "hidden");
-    if (isVisible) bringToForeground(elem);
+    isVisible && bringToForeground(elem);
 };
 
 const createSvgElement = (
@@ -34,14 +40,16 @@ const createSvgElement = (
 
 type TargetElements = Readonly<{ rect: SVGElement; text: SVGElement }>;
 
-const getOrCreateTargetElements = (
+/**
+ * Builds a fresh rect/text pair for a newly-seen target id and
+ * registers it in `targetElements`, so later ticks can find and
+ * reuse the same DOM nodes for that id instead of recreating them.
+ */
+const createTargetElements = (
     svg: SVGSVGElement,
     targetElements: Map<number, TargetElements>,
     id: number,
 ): TargetElements => {
-    const existing = targetElements.get(id);
-    if (existing !== undefined) return existing;
-
     const rect = createSvgElement(svg.namespaceURI, "rect", {
         x: `${Viewport.CANVAS_WIDTH / 2 - TargetBox.WIDTH / 2}`,
         width: `${TargetBox.WIDTH}`,
@@ -62,6 +70,34 @@ const getOrCreateTargetElements = (
     const created: TargetElements = { rect, text };
     targetElements.set(id, created);
     return created;
+};
+
+/**
+ * Returns the existing element pair for `id` if one was already
+ * created, otherwise creates one. `??` only evaluates its right-hand
+ * side when the left is null/undefined, so createTargetElements runs
+ * at most once per id - the same guarantee the original
+ * "if (existing !== undefined) return existing;" gave.
+ */
+const getOrCreateTargetElements = (
+    svg: SVGSVGElement,
+    targetElements: Map<number, TargetElements>,
+    id: number,
+): TargetElements =>
+    targetElements.get(id) ?? createTargetElements(svg, targetElements, id);
+
+/**
+ * Removes the DOM elements and map entry for a target id that no
+ * longer appears in the current state (already matched or dropped).
+ */
+const removeTargetElements = (
+    targetElements: Map<number, TargetElements>,
+    id: number,
+    els: TargetElements,
+): void => {
+    els.rect.remove();
+    els.text.remove();
+    targetElements.delete(id);
 };
 
 export const render = (): ((s: State) => void) => {
@@ -134,11 +170,8 @@ export const render = (): ((s: State) => void) => {
 
         const currentIds = new Set(s.targets.map(t => t.id));
         targetElements.forEach((els, id) => {
-            if (!currentIds.has(id)) {
-                els.rect.remove();
-                els.text.remove();
-                targetElements.delete(id);
-            }
+            !currentIds.has(id) &&
+                removeTargetElements(targetElements, id, els);
         });
 
         s.targets.forEach(t => {

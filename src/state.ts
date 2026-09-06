@@ -10,7 +10,7 @@ import {
 import { bitsToValue, updateAt } from "./util";
 
 /** Base fall speed (px/tick) before any survival-based speed-up. */
-const BASE_FALL_STEP = 6;
+const BASE_FALL_STEP = 2;
 
 /** How quickly fall speed ramps up the longer the player survives. */
 const SPEED_UP_PER_TICK = 0.002;
@@ -78,27 +78,17 @@ const resolveLowestTarget = (
 };
 
 /**
- * Advances the game by one time step. Delegates the three separate
- * concerns above - movement, line-crossing detection, and judging -
- * to their own pure functions so each can be reasoned about (and
- * tested) independently.
- *
- * While paused, this is a no-op - returning s unchanged freezes both
- * the fall animation and check-line judging in place.
+ * Builds the post-judging state once the lowest target has reached
+ * the check line: scores the point (or ends the game on a miss) and
+ * folds in the already-computed elapsedTicks/movedTargets from the
+ * caller, so this stays a small function focused purely on judging.
  */
-export const tick = (s: State): State => {
-    if (s.paused) return s;
-
-    const step = fallStepFor(s.elapsedTicks);
-    const movedTargets = moveTargets(step, s.targets);
-    const elapsedTicks = s.elapsedTicks + 1;
-
-    if (!isLowestAtCheckLine(movedTargets)) {
-        return { ...s, targets: withinBounds(movedTargets), elapsedTicks };
-    }
-
+const judgeTick = (
+    s: State,
+    movedTargets: ReadonlyArray<FallingTarget>,
+    elapsedTicks: number,
+): State => {
     const { targets, scoredPoint } = resolveLowestTarget(s.bits, movedTargets);
-
     return {
         ...s,
         gameEnd: !scoredPoint,
@@ -107,6 +97,31 @@ export const tick = (s: State): State => {
         elapsedTicks,
     };
 };
+
+/**
+ * The tick logic once we already know the game isn't paused: moves
+ * every target down one step, then either just records that movement
+ * or hands off to judgeTick, depending on whether the lowest target
+ * has reached the check line. Kept separate from tick() itself so
+ * that the paused short-circuit below never has to evaluate this.
+ */
+const advanceOrJudge = (s: State): State => {
+    const step = fallStepFor(s.elapsedTicks);
+    const movedTargets = moveTargets(step, s.targets);
+    const elapsedTicks = s.elapsedTicks + 1;
+
+    return isLowestAtCheckLine(movedTargets)
+        ? judgeTick(s, movedTargets, elapsedTicks)
+        : { ...s, targets: withinBounds(movedTargets), elapsedTicks };
+};
+
+/**
+ * Advances the game by one time step. While paused, this is a no-op
+ * - the ternary short-circuits before advanceOrJudge is ever called,
+ * so both the fall animation and check-line judging stay frozen
+ * without wasting a single computation.
+ */
+export const tick = (s: State): State => (s.paused ? s : advanceOrJudge(s));
 
 /** Toggles the bit at `index` between 0 and 1. */
 export const flipBit =

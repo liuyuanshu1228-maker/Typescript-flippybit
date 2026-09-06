@@ -7,7 +7,7 @@ import {
     tick,
     togglePause,
 } from "../src/state";
-import { State } from "../src/types";
+import { BitRow, State } from "../src/types";
 
 describe("flipBit", () => {
     it("flips a 0 bit to 1", () => {
@@ -139,5 +139,58 @@ describe("spawnTarget - paused", () => {
     it("does not add a target while paused", () => {
         const paused: State = { ...initialState, paused: true };
         expect(spawnTarget(5)(paused).targets).toHaveLength(0);
+    });
+});
+
+/**
+ * The spec's Minimum requirements state: "The player's digit row is
+ * only ever compared against the lowest unresolved target, i.e.,
+ * targets above it are ignored until the one below them is resolved
+ * or lost." These tests construct states with two targets at once
+ * to directly verify that rule, which none of the tests above (all
+ * single-target) actually exercise.
+ */
+describe("tick - multiple targets", () => {
+    it("only judges the lowest target when it reaches the check line, leaving a higher target untouched", () => {
+        const bits: BitRow = [0, 0, 0, 0, 0, 1, 0, 1]; // value 5
+        const s: State = {
+            ...initialState,
+            bits,
+            targets: [
+                { id: 0, value: 5, y: 400 }, // lowest: matches bits
+                { id: 1, value: 99, y: 100 }, // higher: not yet relevant
+            ],
+        };
+        const result = tick(s);
+        expect(result.gameEnd).toBe(false);
+        expect(result.targets).toHaveLength(1);
+        expect(result.targets[0].id).toBe(1);
+    });
+
+    it("ends the game based on the lowest target's value, even if a higher target's value matches the bits", () => {
+        const bits: BitRow = [0, 1, 1, 0, 0, 0, 1, 1]; // value 99
+        const s: State = {
+            ...initialState,
+            bits,
+            targets: [
+                { id: 0, value: 5, y: 400 }, // lowest: does not match bits
+                { id: 1, value: 99, y: 100 }, // higher: matches bits, but irrelevant
+            ],
+        };
+        expect(tick(s).gameEnd).toBe(true);
+    });
+
+    it("keeps a higher target's own y position independent once the lowest is removed", () => {
+        const withTwoTargets: State = {
+            ...initialState,
+            targets: [
+                { id: 0, value: 0, y: 400 }, // lowest: matches all-zero bits
+                { id: 1, value: 7, y: 50 },
+            ],
+        };
+        const result = tick(withTwoTargets);
+        expect(result.targets).toHaveLength(1);
+        expect(result.targets[0].id).toBe(1);
+        expect(result.targets[0].y).toBeGreaterThan(50);
     });
 });

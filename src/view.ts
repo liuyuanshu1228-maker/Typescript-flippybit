@@ -1,4 +1,4 @@
-import { Constants, State, Viewport } from "./types";
+import { Constants, FallingTarget, State, Viewport } from "./types";
 import { valueToHex } from "./util";
 
 const TargetBox = {
@@ -39,6 +39,33 @@ const createSvgElement = (
 };
 
 type TargetElements = Readonly<{ rect: SVGElement; text: SVGElement }>;
+
+/**
+ * The exact values render() needs on screen for one target, already
+ * fully computed. Kept as a pure conversion so the DOM-writing loop
+ * in render() never has to call valueToHex itself - it only reads
+ * already-computed fields off this object. This mirrors the same
+ * "compute first, write to DOM separately" split used for spawn$ in
+ * observable.ts.
+ */
+type TargetDisplay = Readonly<{
+    id: number;
+    y: number;
+    textY: number;
+    hex: string;
+}>;
+
+/**
+ * Pure only: turns one FallingTarget's game data into the display
+ * values render() will write to the DOM. Never touches the DOM -
+ * that happens separately, afterwards, in render()'s forEach.
+ */
+const toTargetDisplay = (t: FallingTarget): TargetDisplay => ({
+    id: t.id,
+    y: t.y,
+    textY: t.y + TargetBox.HEIGHT / 2 + 8,
+    hex: valueToHex(t.value),
+});
 
 /**
  * Builds a fresh rect/text pair for a newly-seen target id and
@@ -163,9 +190,14 @@ export const render = (): ((s: State) => void) => {
     svg.appendChild(pausedOverlay);
 
     return (s: State) => {
-        s.bits.forEach((bit, i) => {
-            digitTexts[i].textContent = String(bit);
+        // Pure step first (String() per bit), then a DOM-only loop
+        // that just writes the already-computed text - the same
+        // "compute, then write" split used for targets below.
+        const bitTexts = s.bits.map(String);
+        bitTexts.forEach((text, i) => {
+            digitTexts[i].textContent = text;
         });
+
         scoreText.textContent = String(s.score);
 
         const currentIds = new Set(s.targets.map(t => t.id));
@@ -174,11 +206,21 @@ export const render = (): ((s: State) => void) => {
                 removeTargetElements(targetElements, id, els);
         });
 
-        s.targets.forEach(t => {
-            const els = getOrCreateTargetElements(svg, targetElements, t.id);
-            els.rect.setAttribute("y", `${t.y}`);
-            els.text.setAttribute("y", `${t.y + TargetBox.HEIGHT / 2 + 8}`);
-            els.text.textContent = valueToHex(t.value);
+        // Pure step: compute every target's display values first,
+        // with no DOM access at all (toTargetDisplay only calls
+        // valueToHex, another pure function).
+        const targetDisplays = s.targets.map(toTargetDisplay);
+
+        // Impure step: write the already-computed values to the DOM.
+        // This loop's body now only ever touches els.rect/els.text -
+        // it never calls a pure function itself, unlike the original
+        // version which called valueToHex in the same forEach that
+        // wrote to the DOM.
+        targetDisplays.forEach(d => {
+            const els = getOrCreateTargetElements(svg, targetElements, d.id);
+            els.rect.setAttribute("y", `${d.y}`);
+            els.text.setAttribute("y", `${d.textY}`);
+            els.text.textContent = d.hex;
         });
 
         setElementVisible(gameOver, s.gameEnd);

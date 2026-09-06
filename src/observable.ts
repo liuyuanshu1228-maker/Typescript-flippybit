@@ -1,4 +1,5 @@
 import {
+    EMPTY,
     Observable,
     defer,
     expand,
@@ -19,21 +20,52 @@ export const tick$: Observable<Action> = interval(Constants.TICK_RATE_MS).pipe(
 );
 
 /**
+ * The page's `document` when one exists, otherwise null. Every
+ * DOM-touching stream below goes through this single reader rather
+ * than naming `document` directly, because in a non-browser runtime
+ * (the Vitest/Node runner) `document` is not merely absent but
+ * undeclared - so even reading it throws a ReferenceError.
+ */
+const documentOrNull = (): Document | null =>
+    typeof document === "undefined" ? null : document;
+
+/**
+ * Lifts a "build a stream out of the document" function into a
+ * stream that is safe to subscribe to even with no DOM at all,
+ * falling back to EMPTY (a stream that simply never emits).
+ *
+ * defer() alone is not enough here: it postpones construction to
+ * subscription time, but the test suite does subscribe, so the
+ * ReferenceError would just surface later as an error notification.
+ * Written generically in T so the same guard serves the keyboard
+ * streams (KeyboardEvent) and the click stream (string) alike.
+ */
+const fromDocument = <T>(
+    build: (doc: Document) => Observable<T>,
+): Observable<T> =>
+    defer(() => {
+        const doc = documentOrNull();
+        return doc === null ? EMPTY : build(doc);
+    });
+
+/**
  * Impure only: the raw, filtered keydown-event stream for one key.
- * This function's body only ever touches `document` and the raw
+ * This function's body only ever touches the document and the raw
  * KeyboardEvent - it never calls flipBit or any other pure function,
  * so it stays entirely on the impure side.
  */
 const keyDownFor = (key: string): Observable<KeyboardEvent> =>
-    fromEvent<KeyboardEvent>(document, "keydown").pipe(
-        filter(e => e.key === key && !e.repeat),
+    fromDocument(doc =>
+        fromEvent<KeyboardEvent>(doc, "keydown").pipe(
+            filter(e => e.key === key && !e.repeat),
+        ),
     );
 
 /**
  * Pure only: turns a digit index into the Action that flips it. Kept
  * as its own named function (rather than inlined in the same map
  * callback as the event stream) so this function's body never
- * touches `document` - it only ever calls the pure flipBit.
+ * touches the document - it only ever calls the pure flipBit.
  */
 const toFlipAction = (index: number): Action => flipBit(index);
 
@@ -48,11 +80,9 @@ const keyFlip$ = (key: string, index: number): Observable<Action> =>
     keyDownFor(key).pipe(map(() => toFlipAction(index)));
 
 /** One flip stream per digit (keys "1" to "8"), merged into one stream. */
-export const allKeyFlips$: Observable<Action> = defer(() =>
-    merge(
-        ...Array.from({ length: Constants.DIGIT_COUNT }, (_, i) =>
-            keyFlip$(String(i + 1), i),
-        ),
+export const allKeyFlips$: Observable<Action> = merge(
+    ...Array.from({ length: Constants.DIGIT_COUNT }, (_, i) =>
+        keyFlip$(String(i + 1), i),
     ),
 );
 
@@ -62,9 +92,9 @@ export const allKeyFlips$: Observable<Action> = defer(() =>
  * any other pure function - the pure conversion happens separately
  * in mouseFlip$ below.
  */
-const digitIndexClicks$: Observable<string> = defer(() =>
+const digitIndexClicks$: Observable<string> = fromDocument(doc =>
     fromEvent<MouseEvent>(
-        document.querySelector("#svgCanvas") as SVGSVGElement,
+        doc.querySelector("#svgCanvas") as SVGSVGElement,
         "click",
     ).pipe(
         map(e => (e.target as Element).getAttribute("data-bit-index")),
@@ -110,12 +140,12 @@ export const spawn$: Observable<Action> = defer(randomDelay$).pipe(
 );
 
 /**
- * Pressing "p" toggles pause. Wrapped in defer() for the same reason
- * as allKeyFlips$/mouseFlip$: fromEvent touches `document`, so this
- * must not construct until subscription time (matters under vitest).
+ * Pressing "p" toggles pause. Goes through fromDocument for the same
+ * reason as the flip streams above: it must stay subscribable in a
+ * DOM-less test environment.
  */
-export const pauseToggle$: Observable<Action> = defer(() =>
-    fromEvent<KeyboardEvent>(document, "keydown").pipe(
+export const pauseToggle$: Observable<Action> = fromDocument(doc =>
+    fromEvent<KeyboardEvent>(doc, "keydown").pipe(
         filter(e => (e.key === "p" || e.key === "P") && !e.repeat),
         map(() => togglePause),
     ),

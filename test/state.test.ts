@@ -151,7 +151,7 @@ describe("spawnTarget - paused", () => {
  * single-target) actually exercise.
  */
 describe("tick - multiple targets", () => {
-    it("only judges the lowest target when it reaches the check line, leaving a higher target untouched", () => {
+    it("judges only the lowest target at the check line", () => {
         const bits: BitRow = [0, 0, 0, 0, 0, 1, 0, 1]; // value 5
         const s: State = {
             ...initialState,
@@ -166,21 +166,22 @@ describe("tick - multiple targets", () => {
         expect(result.targets).toHaveLength(1);
         expect(result.targets[0].id).toBe(1);
     });
-
-    it("ends the game based on the lowest target's value, even if a higher target's value matches the bits", () => {
+    // A matching higher target must not rescue a mismatched lowest.
+    it("ends the game on the lowest target, not a higher one", () => {
         const bits: BitRow = [0, 1, 1, 0, 0, 0, 1, 1]; // value 99
         const s: State = {
             ...initialState,
             bits,
             targets: [
                 { id: 0, value: 5, y: 400 }, // lowest: does not match bits
-                { id: 1, value: 99, y: 100 }, // higher: matches bits, but irrelevant
+                // higher: matches bits, but is not yet relevant
+                { id: 1, value: 99, y: 100 },
             ],
         };
         expect(tick(s).gameEnd).toBe(true);
     });
 
-    it("keeps a higher target's own y position independent once the lowest is removed", () => {
+    it("keeps a higher target's own y once the lowest is gone", () => {
         const withTwoTargets: State = {
             ...initialState,
             targets: [

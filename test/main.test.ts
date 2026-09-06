@@ -21,12 +21,13 @@ describe("state$ - game loop progression", () => {
     });
 
     /**
-     * spawn$ fires after a random 1-3s delay. This doesn't touch
-     * `document` (unlike allKeyFlips$/mouseFlip$/pauseToggle$), so
-     * unlike those three it can be exercised here even though this
-     * test file runs in a pure Node environment without jsdom.
+     * spawn$ fires after a random 1-3s delay. The DOM-driven
+     * streams merged alongside it (allKeyFlips$, mouseFlip$ and
+     * pauseToggle$) collapse to EMPTY under this Node runner via
+     * fromDocument, so subscribing to state$() here is safe and
+     * only the timer-driven sources actually emit.
      */
-    it("adds at least one target to state once spawn$ has had time to fire", async () => {
+    it("adds at least one target once spawn$ has fired", async () => {
         const latestPromise = lastValueFrom(state$().pipe(take(80)));
 
         // 80 ticks x 50ms = 4000ms, comfortably past spawn$'s

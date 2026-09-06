@@ -1,6 +1,5 @@
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
-import { Observable } from "rxjs";
-import { State } from "../src/types";
+import { lastValueFrom, take } from "rxjs";
 import { state$ } from "../src/main";
 
 describe("state$ - game loop progression", () => {
@@ -12,16 +11,12 @@ describe("state$ - game loop progression", () => {
         vi.useRealTimers();
     });
 
-    it("advances elapsedTicks as time passes", () => {
-        let latest: State | undefined;
-        const sub = state$().subscribe(s => {
-            latest = s;
-        });
+    it("advances elapsedTicks as time passes", async () => {
+        const latestPromise = lastValueFrom(state$().pipe(take(10)));
 
         vi.advanceTimersByTime(500); // 500ms / 50ms per tick = 10 ticks
 
-        assert.isDefined(latest);
-        assert.isAbove(latest!.elapsedTicks, 0);
-        sub.unsubscribe();
+        const latest = await latestPromise;
+        assert.isAbove(latest.elapsedTicks, 0);
     });
 });

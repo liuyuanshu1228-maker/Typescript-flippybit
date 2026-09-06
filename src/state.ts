@@ -18,7 +18,18 @@ const SPEED_UP_PER_TICK = 0.002;
 /** How close to the bottom a target must get before it is judged. */
 const CHECK_LINE_Y = Viewport.CANVAS_HEIGHT - 60;
 
-const initialBits: BitRow = new Array<Bit>(Constants.DIGIT_COUNT).fill(0);
+/**
+ * A single zero bit, named so that initialBits can be built by
+ * construction rather than by an in-place Array.fill(): Array.from's
+ * callback produces each slot, so no array is ever written to after
+ * it exists.
+ */
+const ZERO_BIT: Bit = 0;
+
+const initialBits: BitRow = Array.from(
+    { length: Constants.DIGIT_COUNT },
+    () => ZERO_BIT,
+);
 
 export const initialState: State = {
     gameEnd: false,

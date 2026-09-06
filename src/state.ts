@@ -7,7 +7,7 @@ import {
     State,
     Viewport,
 } from "./types";
-import { bitsToValue, updateAt } from "./util";
+import { bitsToValue, toggleBitValue, updateAt } from "./util";
 
 /** Base fall speed (px/tick) before any survival-based speed-up. */
 const BASE_FALL_STEP = 2;
@@ -123,12 +123,16 @@ const advanceOrJudge = (s: State): State => {
  */
 export const tick = (s: State): State => (s.paused ? s : advanceOrJudge(s));
 
-/** Toggles the bit at `index` between 0 and 1. */
+/**
+ * Toggles the bit at `index` between 0 and 1. Delegates the actual
+ * flip to toggleBitValue in util.ts rather than reimplementing the
+ * same 0/1 swap here, so there's only one place that logic lives.
+ */
 export const flipBit =
     (index: number) =>
     (s: State): State => ({
         ...s,
-        bits: updateAt(s.bits, index, b => (b === 0 ? 1 : 0)),
+        bits: updateAt(s.bits, index, toggleBitValue),
     });
 
 /**

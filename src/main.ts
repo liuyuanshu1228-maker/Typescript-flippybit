@@ -1,15 +1,8 @@
 /**
- * Inside this file you will use the classes and functions from rx.js
- * to add visuals to the svg element in index.html, animate them, and make them interactive.
- *
- * Study and complete the tasks in observable exercises first to get ideas.
- *
- * Course Notes showing Asteroids in FRP: https://tgdwyer.github.io/asteroids/
- *
- * You will be marked on your functional programming style
- * as well as the functionality that you implement.
- *
- * Document your code!
+ * Entry point: wires the input/timer streams from observable.ts
+ * together with reduceState (state.ts) into a single state$ pipeline,
+ * and subscribes render() (view.ts) to draw each resulting State to
+ * the SVG canvas.
  */
 
 import "./style.css";
